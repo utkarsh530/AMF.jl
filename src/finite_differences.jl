@@ -3,12 +3,6 @@
     solver = ROS34PW1a()
 end
 
-# type piracy hack to get what I want
-function LinearAlgebra.factorize(L::SciMLOperators.AbstractSciMLOperator)
-    fact = factorize(convert(AbstractMatrix, L))
-    SciMLOperators.InvertibleOperator(fact)
-end
-
 function solve2d(A, B, C, N, init_func, alg::FiniteDifferenceMethod; return_prob=false, W_transform=false)
     h = 1 / (N + 1) # homogeneous Dirichlet => can solve linear system on interior grid only.
 
