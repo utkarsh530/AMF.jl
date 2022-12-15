@@ -1,5 +1,6 @@
-struct FiniteDifferenceMethod
-    do_amf::Bool
+@with_kw struct FiniteDifferenceMethod
+    strategy::String = "exact_jac"
+    solver = ROS34PW1a()
 end
 
 # type piracy hack to get what I want
@@ -8,7 +9,7 @@ function LinearAlgebra.factorize(L::SciMLOperators.AbstractSciMLOperator)
     SciMLOperators.InvertibleOperator(fact)
 end
 
-function solve2d(A, B, C, N, init_func, alg::FiniteDifferenceMethod; return_prob=false)
+function solve2d(A, B, C, N, init_func, alg::FiniteDifferenceMethod; return_prob=false, W_transform=false)
     h = 1 / (N + 1) # homogeneous Dirichlet => can solve linear system on interior grid only.
 
     # Make finite difference ops
@@ -30,29 +31,46 @@ function solve2d(A, B, C, N, init_func, alg::FiniteDifferenceMethod; return_prob
         du .= op * u
     end
     
-    if !alg.do_amf
+    if alg.strategy == "exact_jac" 
         func = ODEFunction(f; jac_prototype=op)
-    else
+    elseif alg.strategy in ("exact_W", "amf_W")
         id = IdentityOperator{N^2}() 
+        #γ = ScalarOperator(1.0; update_func = (_, _, p, _) -> p) # avoid scalar operator as it is currently broken
+        γ = MatrixOperator(Diagonal(ones(N^2)); update_func = (D, _, p, _) -> (D.diag .= p))
         # Wfact below is a lazily composed operator.
         # running factorize on it is clever enough to
         # lazily compose the factorizations of each constituent part.
         # End result: each banded factor is efficiently factorized.
-        γ = ScalarOperator(1.0; update_func = (_, _, p, _) -> p)
-        #Wfact_prototype = -id + γ * op
-        Wfact_prototype = -(id - γ * A * Dxx_lazy) * (id - γ * B * Dyy_lazy) 
+        # this is ugly for a couple reasons:
+        # 1) I need to somehow know W_transform in order to set Wfact correctly
+        # 2) I couldn't divide by γ at the end (SciMLOperator's threw an error), so duplicated the whole block
+        if (!W_transform)
+            Wfact_prototype = if alg.strategy == "exact_W"
+                -id + γ * op
+            elseif alg.strategy == "amf_W"
+                -(id - γ * A * Dxx_lazy) * (id - γ * B * Dyy_lazy) 
+            end
+        else
+            Wfact_prototype = if alg.strategy == "exact_W"
+                -1/γ + op
+            elseif alg.strategy == "amf_W"
+                -(id/γ - A * Dxx_lazy) * (id/γ - B * Dyy_lazy) 
+            end
+        end
         Wfact_prototype = cache_operator(Wfact_prototype, rand(N^2))
         function Wfact(W, u, p, dtgamma, t)
             SciMLOperators.update_coefficients!(γ, u, dtgamma, t)
         end
-        func = ODEFunction(f; jac_prototype=op, Wfact_prototype=Wfact_prototype, Wfact=Wfact)
+        func = ODEFunction(f; jac_prototype=op, Wfact_prototype=Wfact_prototype, Wfact=Wfact, Wfact_t=Wfact)
+    else
+        error("Unsupported strategy.")
     end
 
     u0 = [init_func(h * i, h * j) for i in 1:N for j in 1:N]
     prob = ODEProblem(func, u0, (0., 1.))
-    return_prob && return prob, op, u0 # return problem only for debugging
+    return_prob && return prob, op, u0 # stop after problem formation, for debugging  
 
-    sol = solve(prob, Rosenbrock23())
+    sol = solve(prob, alg.solver)
     u = sol.u[end]
 
     # Form 2D solution with BCs padded in
@@ -60,8 +78,3 @@ function solve2d(A, B, C, N, init_func, alg::FiniteDifferenceMethod; return_prob
 
     return sol_2d
 end
-
-# Step 1) Efficient linear solves of differential operator
-
-# Step 2) Make prototype of composed operator for W in build function
-# Step 3) Update composed operator when W is calc'd 
