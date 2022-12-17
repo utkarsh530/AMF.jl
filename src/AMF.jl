@@ -10,6 +10,7 @@ using DomainSets
 using LinearSolve
 using SparseArrays
 using Parameters
+using BenchmarkTools
 
 include("method_of_lines.jl")
 include("finite_differences.jl")
