@@ -1,11 +1,11 @@
 @with_kw struct FiniteDifferenceMethod
     strategy::String = "exact_jac"
     solver = ROS34PW1a
-    reltol = 1e-6
+    reltol = 1e-3
 end
 
 function solve2d(A, B, C, N, g, init_func, alg::FiniteDifferenceMethod; 
-                return_val="sol", W_transform=false)
+                return_val="sol", W_transform=true, final_t = 1.)
     h = 1 / (N + 1) # homogeneous Dirichlet => can solve linear system on interior grid only.
 
     # Make finite difference op
@@ -47,6 +47,8 @@ function solve2d(A, B, C, N, g, init_func, alg::FiniteDifferenceMethod;
             Wfact_prototype = -id2_op + γ_op * op
         elseif alg.strategy == "amf_W"
             Wfact_prototype = -(op1 ⊗ op2)
+            # MatrixFreeFactorization is a strategy I added to LinearSolve.jl to make a lazy factorization
+            # of a lazy operator
             solver_options = (;solver_options..., linsolve=MatrixFreeFactorization())
         end
         # Manually handle W_transform. Not very pretty, ideally the solver would do this for me. 
@@ -64,24 +66,24 @@ function solve2d(A, B, C, N, g, init_func, alg::FiniteDifferenceMethod;
     end
 
     u0 = [init_func(h * i, h * j) for i in 1:N for j in 1:N]
-    prob = ODEProblem(func, u0, (0., 1.))
+    prob = ODEProblem(func, u0, (0., final_t))
     solver = alg.solver(; solver_options...)
 
     if return_val == "prob"
         return prob
     elseif return_val == "integrator"
-        return init(prob, solver; reltol=alg.reltol)  
+        return init(prob, solver; reltol=alg.reltol, abstol=nothing)  
     elseif return_val == "sol"
-        sol = solve(prob, solver; reltol=alg.reltol)
+        sol = solve(prob, solver; reltol=alg.reltol, abstol=nothing)
         u = sol.u[end]
 
         # Form 2D solution with BCs padded in
         sol_2d = [zeros(1, N + 2); zeros(N, 1) reshape(u, N, N) zeros(N, 1); zeros(1, N + 2)]
 
-        return sol_2d
+        return sol_2d, sol
     elseif return_val == "timing" 
-        sol = solve(prob, solver; reltol=alg.reltol)
-        time_solve = @belapsed solve($prob, $solver; reltol=$(alg.reltol)) samples=10
+        sol = solve(prob, solver; reltol=alg.reltol, abstol=nothing)
+        time_solve = @belapsed solve($prob, $solver; reltol=$(alg.reltol)) samples=10 seconds=1
         return time_solve, sol 
     else
         error("Unsupported value $(return_val) for return_val")
