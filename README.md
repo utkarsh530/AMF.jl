@@ -1,5 +1,5 @@
 Contains solvers for the second-order PDE:
-$$\frac{\mathrm{d} u}{\mathrm{d} t} = A u_{xx} + B u_{yy} + C u_{xy} + g(y).$$
+$$\frac{\mathrm{d} u}{\mathrm{d} t} = A u_{xx} + B u_{yy} + C u_{xy} + g(u).$$
 
 The main focus is on incorporating Approximate Matrix Factorization (AMF) into the approaches. File
 descriptions:
