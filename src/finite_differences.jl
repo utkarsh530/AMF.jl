@@ -16,12 +16,12 @@ function solve2d(A, B, C, N, g, init_func, alg::FiniteDifferenceMethod;
     @assert iszero(C) "mixed derivative term not handled yet"
     J1_op = A * Base.kron(D_op, IdentityOperator(N))
     J2_op = B * Base.kron(IdentityOperator(N), D_op)
-    J_op = op1 + op2
+    J_op = J1_op + J2_op
     J_op = cache_operator(J_op, zeros(N^2))
 
     # Make ODE function
     function f(du, u, p, t)
-        mul!(du, op, u)
+        mul!(du, J_op, u)
         g(du, u, p, t)
         return du
     end
@@ -37,7 +37,7 @@ function solve2d(A, B, C, N, g, init_func, alg::FiniteDifferenceMethod;
         end
         func = ODEFunction(f; jac)
     elseif alg.strategy in ("exact_W", "amf_W")
-        γ_op = ScalarOperator(1.0; update_func = (u, p, t; dtgamma) -> dtgamma) 
+        γ_op = ScalarOperator(1.0; update_func = (old_val, u, p, t; dtgamma) -> dtgamma, accepted_kwargs = (:dtgamma,)) 
         transform_op = ScalarOperator(0.0;
             update_func = (old_op, u, p, t; dtgamma, transform) -> transform ?
                                                                    inv(dtgamma) :
@@ -45,7 +45,7 @@ function solve2d(A, B, C, N, g, init_func, alg::FiniteDifferenceMethod;
             accepted_kwargs = (:dtgamma, :transform))
 
         if alg.strategy == "exact_W"
-            W_prototype = -(IdentityOperator(N^2) - γ_op * op) * transform_op
+            W_prototype = -(IdentityOperator(N^2) - γ_op * J_op) * transform_op
         elseif alg.strategy == "amf_W"
             # I would like to write the below two lines, but it doesn't work yet because they won't be concrete and factorizable.
             # W1_op = I - γ_op * J1_op 
@@ -60,7 +60,7 @@ function solve2d(A, B, C, N, g, init_func, alg::FiniteDifferenceMethod;
             solver_options = (;solver_options..., linsolve=GenericFactorization(factorize_scimlop))
         end
         W_prototype = cache_operator(W_prototype, zeros(N^2))
-        func = ODEFunction(f; jac_prototype=op, W_prototype)
+        func = ODEFunction(f; jac_prototype=J_op, W_prototype)
     else
         error("Unsupported strategy.")
     end

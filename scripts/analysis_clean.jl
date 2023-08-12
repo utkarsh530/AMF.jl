@@ -32,6 +32,8 @@ function linsolve_stats(N, strategy)
     return (;time_per_linsolve, nsolve=sol.destats.nsolve, iterations_per_linsolve)
 end
 
+run_job(2; strategy="amf_W", return_val="timing");
+
 function collect_linsolve_data(Ns)
     amf = []
     exact = []
