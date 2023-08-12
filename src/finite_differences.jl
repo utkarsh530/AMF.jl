@@ -15,7 +15,7 @@ function solve2d(A, B, C, N, g, init_func, alg::FiniteDifferenceMethod;
     id_op = oneunit(D)
 
     # Make diffeq op
-    op = A * (D_op ⊗ id_op)  + B * (id_op ⊗ D_op) # TODO: mixed derivative term
+    op = A * (D_op ⊗ id_op) + B * (id_op ⊗ D_op) # TODO: mixed derivative term
     op = cache_operator(op, rand(N^2))
 
     # Make ODE function
