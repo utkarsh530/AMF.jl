@@ -13,8 +13,11 @@ function solve2d(A, B, C, N, g, init_func, alg::FiniteDifferenceMethod;
     D_op = MatrixOperator(D)
 
     # Make diffeq op
-    op = A * (D_op ⊗ I) + B * (I ⊗ D_op) # TODO: mixed derivative term
-    op = cache_operator(op, zeros(N^2))
+    @assert iszero(C) "mixed derivative term not handled yet"
+    J1_op = A * Base.kron(D_op, IdentityOperator(N))
+    J2_op = B * Base.kron(IdentityOperator(N), D_op)
+    J_op = op1 + op2
+    J_op = cache_operator(J_op, zeros(N^2))
 
     # Make ODE function
     function f(du, u, p, t)
@@ -25,10 +28,13 @@ function solve2d(A, B, C, N, g, init_func, alg::FiniteDifferenceMethod;
 
     solver_options = (;)
     if alg.strategy == "exact_jac" 
-        func = ODEFunction(f; jac_prototype=op)
+        func = ODEFunction(f; jac_prototype=J_op)
     elseif alg.strategy == "concrete_jac"
-        op_concrete = convert(AbstractMatrix, op)
-        jac(J, u, p, t) = (J .= op_concrete)
+        function jac(J, u, p, t)
+            update_coefficients!(J_op, u, p, t)
+            J .= convert(AbstractMatrix, J_op) # TODO: could be replaced with in-place concretize!
+            return J
+        end
         func = ODEFunction(f; jac)
     elseif alg.strategy in ("exact_W", "amf_W")
         γ_op = ScalarOperator(1.0; update_func = (u, p, t; dtgamma) -> dtgamma) 
@@ -39,12 +45,19 @@ function solve2d(A, B, C, N, g, init_func, alg::FiniteDifferenceMethod;
             accepted_kwargs = (:dtgamma, :transform))
 
         if alg.strategy == "exact_W"
-            W_prototype = -(I - γ_op * op) * transform_op
+            W_prototype = -(IdentityOperator(N^2) - γ_op * op) * transform_op
         elseif alg.strategy == "amf_W"
-            op1 = I - γ_op * A * (D_op ⊗ I)
-            op2 = I - γ_op * B * (I ⊗ D_op)
-            W_prototype = -(op1 + op2) * transform_op
-            solver_options = (;solver_options..., linsolve=GenericLUFactorization(factorize_scimlop))
+            # I would like to write the below two lines, but it doesn't work yet because they won't be concrete and factorizable.
+            # W1_op = I - γ_op * J1_op 
+            # W2_op = I - γ_op * J2_op 
+            # Instead, I need this hackier code:
+            I_N = Diagonal(ones(N))
+            _W1_op = MatrixOperator(similar(D); update_func = (M, _, γ, _) -> (@. M = I_N - γ * A * D)) 
+            _W2_op = MatrixOperator(similar(D); update_func = (M, _, γ, _) -> (@. M = I_N - γ * B * D)) 
+            W1_op = Base.kron(_W1_op, IdentityOperator(N))
+            W2_op = Base.kron(IdentityOperator(N), _W2_op)
+            W_prototype = -(W1_op * W2_op) * transform_op 
+            solver_options = (;solver_options..., linsolve=GenericFactorization(factorize_scimlop))
         end
         W_prototype = cache_operator(W_prototype, zeros(N^2))
         func = ODEFunction(f; jac_prototype=op, W_prototype)

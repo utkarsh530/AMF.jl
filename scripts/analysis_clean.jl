@@ -18,9 +18,9 @@ function g(du, u, p, t)
 end
 
 # kwargs: strategy, solver, rtol
-function run_job(N=N; return_val="sol", W_transform = true, final_t = 1, kwargs...)
+function run_job(N=N; return_val="sol", final_t = 1, kwargs...)
     return solve2d(A, B, C, N, g, init_func, fdm(; kwargs...);
-            return_val, W_transform, final_t);
+            return_val, final_t);
 end
 
 ### Collect linear solve timings
