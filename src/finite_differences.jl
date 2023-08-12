@@ -5,18 +5,16 @@
 end
 
 function solve2d(A, B, C, N, g, init_func, alg::FiniteDifferenceMethod; 
-                return_val="sol", W_transform=true, final_t = 1.)
+                return_val="sol", final_t = 1.)
     h = 1 / (N + 1) # homogeneous Dirichlet => can solve linear system on interior grid only.
 
     # Make finite difference op
     D = 1/(h^2) * Tridiagonal(ones(N - 1), -2 * ones(N), ones(N - 1))
-    id = Diagonal(ones(N))
     D_op = MatrixOperator(D)
-    id_op = oneunit(D)
 
     # Make diffeq op
-    op = A * (D_op ⊗ id_op) + B * (id_op ⊗ D_op) # TODO: mixed derivative term
-    op = cache_operator(op, rand(N^2))
+    op = A * (D_op ⊗ I) + B * (I ⊗ D_op) # TODO: mixed derivative term
+    op = cache_operator(op, zeros(N^2))
 
     # Make ODE function
     function f(du, u, p, t)
@@ -33,34 +31,23 @@ function solve2d(A, B, C, N, g, init_func, alg::FiniteDifferenceMethod;
         jac(J, u, p, t) = (J .= op_concrete)
         func = ODEFunction(f; jac)
     elseif alg.strategy in ("exact_W", "amf_W")
-        #γ = ScalarOperator(1.0; update_func = (_, _, p, _) -> p) # avoid scalar operator as it is currently broken
-        γ_op = MatrixOperator(Diagonal(ones(N^2)); update_func = (D, _, γ, _) -> (D.diag .= γ))
-        id2_op = IdentityOperator{N^2}()
-        # TODO: I wouldn't have to write my own update funcs below if a SciMLOperator could 
-        # be converted into a MatrixOperator with the right update func
-        op1 = MatrixOperator(id - A * D; update_func = (M, _, γ, _) -> (@. M = id - γ * A * D)) 
-        op2 = MatrixOperator(id - B * D; update_func = (M, _, γ, _) -> (@. M = id - γ * B * D)) 
-        # Wfact below is a lazily composed operator.
-        # running factorize on it is clever enough to
-        # lazily compose the factorizations of each constituent part.
+        γ_op = ScalarOperator(1.0; update_func = (u, p, t; dtgamma) -> dtgamma) 
+        transform_op = ScalarOperator(0.0;
+            update_func = (old_op, u, p, t; dtgamma, transform) -> transform ?
+                                                                   inv(dtgamma) :
+                                                                   one(dtgamma),
+            accepted_kwargs = (:dtgamma, :transform))
+
         if alg.strategy == "exact_W"
-            Wfact_prototype = -id2_op + γ_op * op
+            W_prototype = -(I - γ_op * op) * transform_op
         elseif alg.strategy == "amf_W"
-            Wfact_prototype = -(op1 ⊗ op2)
-            # MatrixFreeFactorization is a strategy I added to LinearSolve.jl to make a lazy factorization
-            # of a lazy operator
-            solver_options = (;solver_options..., linsolve=MatrixFreeFactorization())
+            op1 = I - γ_op * A * (D_op ⊗ I)
+            op2 = I - γ_op * B * (I ⊗ D_op)
+            W_prototype = -(op1 + op2) * transform_op
+            solver_options = (;solver_options..., linsolve=GenericLUFactorization(factorize_scimlop))
         end
-        # Manually handle W_transform. Not very pretty, ideally the solver would do this for me. 
-        W_transform && (Wfact_prototype *= 1/γ_op)
-        Wfact_prototype = cache_operator(Wfact_prototype, zeros(N^2))
-        # TODO: if update_coefficients! included kwargs, the below could be automated
-        function Wfact(W, u, p, dtgamma, t)
-            SciMLOperators.update_coefficients!(γ_op, u, dtgamma, t)
-            SciMLOperators.update_coefficients!(op1, u, dtgamma, t)
-            SciMLOperators.update_coefficients!(op2, u, dtgamma, t)
-        end
-        func = ODEFunction(f; jac_prototype=op, Wfact_prototype=Wfact_prototype, Wfact=Wfact, Wfact_t=Wfact)
+        W_prototype = cache_operator(W_prototype, zeros(N^2))
+        func = ODEFunction(f; jac_prototype=op, W_prototype)
     else
         error("Unsupported strategy.")
     end

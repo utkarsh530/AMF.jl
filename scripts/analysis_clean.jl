@@ -56,7 +56,7 @@ function get_linsolve_data()
 end
 
 data = get_linsolve_data()
-save("AMF/analysis/linsolve_data.jld2", Dict("data" => data))
+save("AMF/plots/linsolve_data.jld2", Dict("data" => data))
 
 function plot_linsolve_data(amf, concrete, exact)
     p = plot(yaxis=:log, xlabel="N", ylabel="Time per linear solve", legend=:topleft)
@@ -65,7 +65,7 @@ function plot_linsolve_data(amf, concrete, exact)
     plot!(p, first.(concrete), map(d -> d.time_per_linsolve, last.(concrete)), label="Gaussian elimination", markershape=:circle)
     plot!(p, dpi=1000)
     plot!(p, yticks=[1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
-    savefig(p, "AMF/analysis/timing.png")
+    savefig(p, "AMF/plots/timing.png")
     return p
 end
 
@@ -117,7 +117,7 @@ function plot_amf_errors(γs, matvec_errors, inv_errors)
     plot!(p, γs, matvec_errors,  label="Matrix-vector product", legend=:topleft, markershape=:circle)
     plot!(p, γs, inv_errors,  label="Inversion", markershape=:circle)
     plot!(p, dpi=800)
-    savefig(p, "AMF/analysis/amferrors.png")
+    savefig(p, "AMF/plots/amferrors.png")
     return p
 end
 
@@ -128,7 +128,7 @@ plot_amf_errors(γs, matvec_errors, inv_errors)
 exact_sol, _ = run_job(100; strategy="exact_jac", return_val="sol", reltol=1e-14);
 p = heatmap(exact_sol)
 plot!(p, dpi=800)
-savefig(p, "AMF/analysis/exact.png")
+savefig(p, "AMF/plots/exact.png")
 
 ### Make work-precision diagram
 
@@ -164,7 +164,7 @@ function get_workprec_data(rtols_log=(-1:-1:-10))
 end
 
 data = get_workprec_data(-1:-1:-10)
-save("AMF/analysis/workprec_data.jld2", Dict("data" => data))
+save("AMF/plots/workprec_data.jld2", Dict("data" => data))
 
 function plot_workprec_data(data)
     reltols, errors_w, errors_amf, time_solves_w, time_solves_amf, solns_w, solns_amf = data;
@@ -172,7 +172,7 @@ function plot_workprec_data(data)
     plot!(p, errors_w, time_solves_w, label="Krylov method", markershape=:circle)
     plot!(p, errors_amf, time_solves_amf, label="AMF-W", markershape=:circle)
     plot!(p, dpi=800)
-    savefig(p, "AMF/analysis/workprec.png")
+    savefig(p, "AMF/plots/workprec.png")
     return p
 end
 
@@ -231,7 +231,7 @@ function get_pseudotime_data()
 end
 
 data = get_pseudotime_data()
-save("AMF/analysis/data.jld2", Dict("data" => data))
+save("AMF/plots/data.jld2", Dict("data" => data))
 
 function plot_pseudotime_data(data)
     iters_amf, errs_amf, iters_krylov, errs_krylov = data
@@ -240,7 +240,7 @@ function plot_pseudotime_data(data)
     plot!(p, errs_krylov, iters_krylov, markershape=:circle, label="Krylov method")
     plot!(p, errs_amf, iters_amf, markershape=:circle, label="Pseudotime AMF-W")
     plot!(p, dpi=700)
-    savefig(p, "AMF/analysis/pseudotime.png")
+    savefig(p, "AMF/plots/pseudotime.png")
     return p
 end
 
