@@ -32,7 +32,7 @@ function linsolve_stats(N, strategy)
     return (;time_per_linsolve, nsolve=sol.destats.nsolve, iterations_per_linsolve)
 end
 
-run_job(2; strategy="amf_W", return_val="timing");
+run_job(2; strategy="amf_W", return_val="sol");
 
 function collect_linsolve_data(Ns)
     amf = []

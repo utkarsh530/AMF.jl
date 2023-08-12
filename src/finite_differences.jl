@@ -57,7 +57,7 @@ function solve2d(A, B, C, N, g, init_func, alg::FiniteDifferenceMethod;
             W1_op = Base.kron(_W1_op, IdentityOperator(N))
             W2_op = Base.kron(IdentityOperator(N), _W2_op)
             W_prototype = -(W1_op * W2_op) * transform_op 
-            solver_options = (;solver_options..., linsolve=GenericFactorization(factorize_scimlop))
+            solver_options = (;solver_options...)#, linsolve=GenericFactorization(factorize_scimlop))
         end
         W_prototype = cache_operator(W_prototype, zeros(N^2))
         func = ODEFunction(f; jac_prototype=J_op, W_prototype)
