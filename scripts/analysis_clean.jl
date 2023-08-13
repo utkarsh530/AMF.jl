@@ -33,13 +33,6 @@ function linsolve_stats(N, strategy)
     return (;time_per_linsolve, nsolve=sol.destats.nsolve, iterations_per_linsolve)
 end
 
-prob = run_job(2; strategy="amf_W", return_val="prob");
-W_op = prob.f.W_prototype
-
-integrator = init(prob, ROS34PW1a(linsolve=GenericLUFactorization(AMF.factorize_scimlop)))
-integrator.cache.linsolve |> typeof
-run_job(2; strategy="amf_W", return_val="sol");
-
 function collect_linsolve_data(Ns)
     amf = []
     exact = []

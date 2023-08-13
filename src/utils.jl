@@ -1,3 +1,5 @@
+# hack up a factorization that works for SciMLOps with a useful factorize
+
 function factorize_scimlop(A)
     _fact = LinearAlgebra.factorize(A) 
     # TODO: the input to cache_operator is not constructed generically enough.
@@ -12,7 +14,7 @@ function LinearSolve.do_factorization(alg::LinearSolve.GenericFactorization{type
     return fact
 end 
 
-function LinearSolve.init_cacheval(alg::LinearSolve.AbstractFactorization, A::SciMLOperators.AbstractSciMLOperator, b, u, Pl, Pr, maxiters::Int, abstol,
+function LinearSolve.init_cacheval(alg::LinearSolve.GenericFactorization{typeof(factorize_scimlop)}, A::SciMLOperators.AbstractSciMLOperator, b, u, Pl, Pr, maxiters::Int, abstol,
     reltol, verbose::Bool, assumptions::OperatorAssumptions)
     LinearSolve.do_factorization(alg, A, b, u)
 end
