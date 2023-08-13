@@ -52,12 +52,12 @@ function solve2d(A, B, C, N, g, init_func, alg::FiniteDifferenceMethod;
             # W2_op = I - γ_op * J2_op 
             # Instead, I need this hackier code:
             I_N = Diagonal(ones(N))
-            _W1_op = MatrixOperator(similar(D); update_func = (M, _, γ, _) -> (@. M = I_N - γ * A * D)) 
-            _W2_op = MatrixOperator(similar(D); update_func = (M, _, γ, _) -> (@. M = I_N - γ * B * D)) 
+            _W1_op = MatrixOperator(I_N - A * D; update_func = (old_val, u, p, t; dtgamma) -> (@. M = I_N - dtgamma * A * D)) 
+            _W2_op = MatrixOperator(I_N - B * D; update_func = (old_val, u, p, t; dtgamma) -> (@. M = I_N - dtgamma * B * D)) 
             W1_op = Base.kron(_W1_op, IdentityOperator(N))
             W2_op = Base.kron(IdentityOperator(N), _W2_op)
             W_prototype = -(W1_op * W2_op) * transform_op 
-            solver_options = (;solver_options...)#, linsolve=GenericFactorization(factorize_scimlop))
+            solver_options = (;solver_options..., linsolve=GenericFactorization(factorize_scimlop))
         end
         W_prototype = cache_operator(W_prototype, zeros(N^2))
         func = ODEFunction(f; jac_prototype=J_op, W_prototype)

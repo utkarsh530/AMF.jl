@@ -6,3 +6,13 @@ function factorize_scimlop(A)
     fact = cache_operator(_fact, zeros(size(A, 2))) 
     return fact
 end
+
+function LinearSolve.do_factorization(alg::LinearSolve.GenericFactorization{typeof(factorize_scimlop)}, A, b, u)
+    fact = alg.fact_alg(A)
+    return fact
+end 
+
+function LinearSolve.init_cacheval(alg::LinearSolve.AbstractFactorization, A::SciMLOperators.AbstractSciMLOperator, b, u, Pl, Pr, maxiters::Int, abstol,
+    reltol, verbose::Bool, assumptions::OperatorAssumptions)
+    LinearSolve.do_factorization(alg, A, b, u)
+end
