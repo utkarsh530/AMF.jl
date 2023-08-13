@@ -68,7 +68,7 @@ function plot_linsolve_data(amf, concrete, exact)
     plot!(p, first.(concrete), map(d -> d.time_per_linsolve, last.(concrete)), label="Gaussian elimination", markershape=:circle)
     plot!(p, dpi=1000)
     plot!(p, yticks=[1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
-    savefig(p, "AMF/plots/timing.png")
+    savefig(p, "plots/timing.png")
     return p
 end
 
@@ -77,12 +77,14 @@ p = plot_linsolve_data(data...)
 ### Make AMF accuracy diagram
 
 function get_amf_errors()
-    integrator_w = run_job(100; strategy="exact_W", return_val="integrator");
+    integrator_exact = run_job(100; strategy="exact_W", return_val="integrator");
     integrator_amf = run_job(100; strategy="amf_W", return_val="integrator");
-    step!(integrator_w)
+    step!(integrator_exact)
     step!(integrator_amf)
-    W_exact = integrator_w.cache.W;
+    W_exact = integrator_exact.cache.W;
     W_amf = integrator_amf.cache.W;
+    linsolve_exact = integrator_exact.cache.linsolve
+    linsolve_amf = integrator_amf.cache.linsolve
 
     γs = []
     matvec_errors = []
@@ -91,16 +93,18 @@ function get_amf_errors()
     for γ_log in -7:1:0
         γ = 10.0^(γ_log)
         @info "Next γ..." γ
-        integrator_amf.f.Wfact(W_amf, 0, 0, γ, 0)
-        integrator_w.f.Wfact(W_exact, 0, 0, γ, 0)
+        update_coefficients!(W_exact, nothing, nothing, nothing; dtgamma=γ, transform=false)
+        update_coefficients!(W_amf, nothing, nothing, nothing; dtgamma=γ, transform=false)
         u = rand(100^2)
         matvec_exact = W_exact * u
         matvec_amf = W_amf * u
         push!(γs, γ)
         push!(matvec_errors, norm(matvec_exact - matvec_amf) / norm(matvec_exact))
-        linsolve_w = LinearSolve.set_b(integrator_w.cache.linsolve, copy(u))
-        linsolve_amf = LinearSolve.set_b(integrator_amf.cache.linsolve, copy(u))
-        inv_exact = solve(linsolve_w; reltol=1e-14).u
+        linsolve_exact.b = copy(u)
+        linsolve_amf.b = copy(u)
+        linsolve_exact.A = W_exact
+        linsolve_amf.A = W_amf
+        inv_exact = solve(linsolve_exact; reltol=1e-14).u
         inv_amf = solve(linsolve_amf; reltol=1e-14).u
         @show norm(inv_amf)
         push!(inv_errors, norm(inv_exact - inv_amf) / norm(inv_exact))
@@ -108,7 +112,6 @@ function get_amf_errors()
 
     return γs, matvec_errors, inv_errors
 end
-
 
 γs, matvec_errors, inv_errors = get_amf_errors()
 
