@@ -11,7 +11,7 @@ using BenchmarkTools
 include("utils.jl")
 include("finite_differences.jl")
 
-# (MOL baseline commented out for now
+# (MOL baseline commented out for now)
 
 #=
 using MethodOfLines
