@@ -1,3 +1,5 @@
+cd(dirname(@__DIR__))
+
 using AMF: solve2d, FiniteDifferenceMethod as fdm, MethodOfLinesMethod as mol
 import AMF
 using Plots
