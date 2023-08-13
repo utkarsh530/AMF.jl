@@ -10,17 +10,13 @@ descriptions:
 
 `analysis_clean.ipynb`: preliminary analysis of the methods.
 
-## Running code
+## Running scripts
 
-Getting AMF to work required some changes to the dependencies, so one also needs to check out the following forks:
-
-https://github.com/gaurav-arya/SciMLBase.jl/commits/amf
-
-https://github.com/gaurav-arya/OrdinaryDiffEq.jl/tree/amf
-
-https://github.com/gaurav-arya/SciMLOperators.jl/tree/amf
-
-https://github.com/gaurav-arya/LinearSolve.jl/commits/amf
-
-For each of these libraries, one should clone the repo+branch, and then `dev` the repo in Julia's `Pkg` manager.
+Open Julia in this directory and run the following in Julia's package manager: 
+```julia
+] activate scripts
+] dev .
+] instantiate
+```
+in Julia's REPL package manager, which activates the environment in the `scripts` directory, develops the `src` code in the `AMF.jl` module here, and then builds the environment. The scripts should now be runnable in this environment.
 
