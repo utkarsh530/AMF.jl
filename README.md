@@ -8,7 +8,9 @@ descriptions:
 
 `src/method_of_lines.jl`: An alternative implementation to verify correctness. This file hasn't been maintained in a while and is not useed in the analysis. 
 
-`analysis_clean.ipynb`: preliminary analysis of the methods.
+`scripts/minimal.jl`: minimal example.
+
+`scripts/analysis_clean.jl`: preliminary analysis of the methods.
 
 ## Running scripts
 
