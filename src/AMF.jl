@@ -7,6 +7,10 @@ using LinearSolve
 using SparseArrays
 using Parameters
 using BenchmarkTools
+using ModelingToolkit
+using RuntimeGeneratedFunctions
+
+RuntimeGeneratedFunctions.init(@__MODULE__)
 
 include("utils.jl")
 include("finite_differences.jl")
