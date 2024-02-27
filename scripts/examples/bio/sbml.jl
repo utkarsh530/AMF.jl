@@ -6,7 +6,8 @@ using OrdinaryDiffEq
 
 par = load(joinpath(@__DIR__, "params_Bidkhori2012.jld2"))
 
-function sbml_model!(du, u, p, t)
+function sbml_model!(du, u, p, t)   
+
     # assignmentRule: variable = mwa6994523_5d45_4000_af0c_3e94073bf183
     u88 = u[80] + u[79]
 
@@ -1576,6 +1577,7 @@ function sbml_model!(du, u, p, t)
 end
 
 # u0 = fill!(Array{Num}(undef, N), 0)
+    
 begin
     u0 = zeros(109)
     u0[1] = 0.0081967
