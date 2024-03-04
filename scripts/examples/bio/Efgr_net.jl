@@ -14,11 +14,14 @@ tspan = (0.,15)
 
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(osys, Float64[], tspan, Float64[])
 
-func = ODEFunction(prob.f)
 using ForwardDiff
+u  = ModelingToolkit.varmap_to_vars(nothing, species(rn); defaults=ModelingToolkit.defaults(rn))
+du = copy(u)
+p  = ModelingToolkit.varmap_to_vars(nothing, parameters(rn); defaults=ModelingToolkit.defaults(rn))
 
-J = ForwardDiff.jacobian(prob.f, prob.u0)
-fjac(du,u,p,t) -> ForwardDiff.jacobian!(J,(du,u) ->f!(du,u,p,t),du,u)
+J = AbstractArray{Float64, 356}
+J = ForwardDiff.jacobian!(J, (du, u) -> f!(du, u, p ,t), du, u)
+
 
 #prob, oprob = AMF.generate_trig_amf_prob(prob)
 
