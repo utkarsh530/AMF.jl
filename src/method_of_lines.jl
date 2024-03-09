@@ -1,5 +1,4 @@
-struct MethodOfLinesMethod
-end
+struct MethodOfLinesMethod end
 
 function solve2d(A, B, C, N, init_func, alg::MethodOfLinesMethod)
 
@@ -13,17 +12,17 @@ function solve2d(A, B, C, N, init_func, alg::MethodOfLinesMethod)
 
     # 2D PDE with homogeneous Dirichlet boundary conditions
     eq = Dt(u(t, x, y)) ~ A * Dxx(u(t, x, y)) + B * Dyy(u(t, x, y)) + C * Dxy(u(t, x, y))
-    bcs = [u(0, x, y) ~ init_func(x, y),
+    bcs = [
+        u(0, x, y) ~ init_func(x, y),
         u(t, 0, y) ~ 0,
         u(t, x, 0) ~ 0,
         u(t, 1, y) ~ 0,
-        u(t, x, 1) ~ 0]
+        u(t, x, 1) ~ 0,
+    ]
 
     # Space and time domains
-    domains = [t ∈ Interval(0.0, 1.0),
-            x ∈ Interval(0.0, 1.0),
-            y ∈ Interval(0.0, 1.0)]
-    
+    domains = [t ∈ Interval(0.0, 1.0), x ∈ Interval(0.0, 1.0), y ∈ Interval(0.0, 1.0)]
+
     # PDE system
     @named pdesys = PDESystem(eq, bcs, domains, [t, x, y], [u(t, x, y)])
 
