@@ -9,7 +9,7 @@ obs = [eq.lhs for eq in observed(rn)]
 osys = convert(ODESystem, rn)
 
 tspan = (0.,tf)
-prob = ODEProblem{true, SciMLBase.FullSpecialize}(osys, Float64[], tspan, Float64[])
+prob = ODEProblem{true, SciMLBase.FullSpecialize}(osys, Float64[], tspan, Float64[], jac = sparse_jac)
 
 ## generate LU and normal problems
 prob, oprob = AMF.generate_trig_amf_prob(prob)
